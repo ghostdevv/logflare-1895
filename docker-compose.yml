@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  # Database for logflare
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: logflare
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: logflare
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
+      # - type: bind
+      #   source: ./priv/wal.sql
+      #   target: /docker-entrypoint-initdb.d/wal.sql
+
+  # Database for logs
+  data:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: logflare
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: logflare
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
+
+  logflare:
+    image: supabase/logflare:1.5.12
+    ports:
+      - "4000:4000"
+    hostname: 127.0.0.1
+    environment:
+      - DB_DATABASE=logflare
+      - DB_HOSTNAME=db
+      - DB_PORT=5432
+      - DB_PASSWORD=postgres
+      - DB_USERNAME=logflare
+
+      - LOGFLARE_SINGLE_TENANT=true
+      - LOGFLARE_API_KEY=my-cool-api-key
+
+      - POSTGRES_BACKEND_URL=postgresql://logflare:postgres@data:5432/logflare
+      - POSTGRES_BACKEND_SCHEMA=public
+    # volumes:
+      # - type: bind
+      #   source: ${PWD}/.env
+      #   target: /tmp/.secrets.env
+      #   read_only: true
+      # - type: bind
+      #   source: ${PWD}/gcloud.json
+      #   target: /opt/app/rel/logflare/bin/gcloud.json
+      #   read_only: true
+    depends_on:
+      - db
+      - data
+
+volumes:
+  db:
+  data:
